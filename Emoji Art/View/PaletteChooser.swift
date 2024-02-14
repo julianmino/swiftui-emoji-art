@@ -11,12 +11,25 @@ struct PaletteChooser: View {
     
     @EnvironmentObject var store: PaletteStore
     
+    @State private var showPaletteEditor = false
+    @State private var showPaletteList = false
+    
     var body: some View {
         HStack {
             chooser
             view(for: store.palettes[store.cursorIndex])
         }
         .clipped()
+        .sheet(isPresented: $showPaletteEditor) {
+            PaletteEditor(palette: $store.palettes[store.cursorIndex])
+                .font(nil)
+        }
+        .sheet(isPresented: $showPaletteList) {
+            NavigationStack {
+                EditablePaletteList(store: store)
+                    .font(nil)
+            }
+        }
     }
     
     var chooser: some View {
@@ -24,13 +37,35 @@ struct PaletteChooser: View {
             store.cursorIndex += 1
         }
         .contextMenu(menuItems: {
+            gotoMenu
             AnimatedActionButton(title: "New", systemImage: "plus") {
-                store.insert(Palette(name: "Math", emojis: "1234567890+-x%="))
+                store.insert(name: "", emojis: "")
+                showPaletteEditor = true
+            }
+            AnimatedActionButton(title: "Edit", systemImage: "pencil") {
+                showPaletteEditor = true
+            }
+            AnimatedActionButton(title: "List", systemImage: "list.bullet.rectangle.portrait") {
+                showPaletteList = true
             }
             AnimatedActionButton(title: "Delete", systemImage: "minus.circle", role: .destructive) {
                 store.palettes.remove(at: store.cursorIndex)
             }
         })
+    }
+    
+    private var gotoMenu: some View {
+        Menu {
+            ForEach(store.palettes) { palette in
+                AnimatedActionButton(title: palette.name) {
+                    if let index = store.palettes.firstIndex(where: { $0.id == palette.id }) {
+                        store.cursorIndex = index
+                    }
+                }
+            }
+        } label: {
+            Label("Go to", systemImage: "text.insert")
+        }
     }
     
     func view(for palette: Palette) -> some View {
